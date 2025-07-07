@@ -1,10 +1,9 @@
 import pandas as pd
 import numpy as np
 
-
-def simulate(test_data, predictions):
+# k: số lượng top cổ phiếu uptrend và downtrend
+def simulate(test_data, predictions, k=10):
     rets = pd.DataFrame([], columns=['Long', 'Short'])
-    k = 10
     for day in sorted(predictions.keys()):
         preds = predictions[day]
         test_returns = test_data[test_data[:, 0] == day][:, -2]
