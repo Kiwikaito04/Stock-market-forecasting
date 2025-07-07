@@ -1,11 +1,6 @@
 import pandas as pd
 import numpy as np
 
-def reshaper(arr):
-    arr = np.array(np.split(arr, 3, axis=1))
-    arr = np.swapaxes(arr, 0, 1)
-    arr = np.swapaxes(arr, 1, 2)
-    return arr
 
 def simulate(test_data, predictions):
     rets = pd.DataFrame([], columns=['Long', 'Short'])

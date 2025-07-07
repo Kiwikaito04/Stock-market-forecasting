@@ -2,6 +2,12 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import RobustScaler
 
+def reshaper(arr):
+    arr = np.array(np.split(arr, 3, axis=1))
+    arr = np.swapaxes(arr, 0, 1)
+    arr = np.swapaxes(arr, 1, 2)
+    return arr
+
 # perc=[0.5, 0.5] chia tỉ lệ 50% 50% (một nửa rank cao nhất sẽ label 1) (nửa còn lại label 0)
 def create_label(df_open, df_close, perc=[0.5, 0.5]):
 
