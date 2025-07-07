@@ -28,7 +28,7 @@ def trainer_LSTM_I3f240(train_data, test_data, test_year, folder_save='models'):
     train_ret = np.hstack((np.zeros((len(train_data), 1)), train_ret))
 
     model = LSTM_Model(features=3, time_steps=240).makeLSTM()
-    CALLBACK = create_callbacks(test_year, folder_save)
+    CALLBACK = create_callbacks(test_year, folder=folder_save)
 
     model.fit(train_x, enc_y,
               epochs=1000,
