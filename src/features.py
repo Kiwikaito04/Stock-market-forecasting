@@ -8,6 +8,12 @@ def reshaper(arr):
     arr = np.swapaxes(arr, 1, 2)
     return arr
 
+def scalar_normalize(train_data, test_data):
+    scaler = RobustScaler()
+    scaler.fit(train_data[:, 2:-2])
+    train_data[:, 2:-2] = scaler.transform(train_data[:, 2:-2])
+    test_data[:, 2:-2] = scaler.transform(test_data[:, 2:-2])
+
 # perc=[0.5, 0.5] chia tỉ lệ 50% 50% (một nửa rank cao nhất sẽ label 1) (nửa còn lại label 0)
 def create_label(df_open, df_close, perc=[0.5, 0.5]):
 
@@ -24,7 +30,7 @@ def create_label(df_open, df_close, perc=[0.5, 0.5]):
 
     return label[1:]  # bỏ ngày đầu tiên vì không có giá trị trước đó
 
-def create_stock_data(df_open, df_close, label, ticker: str, test_year: int, window: int = 240):
+def create_stock_data_Intraday_3f(df_open, df_close, label, ticker: str, test_year: int, window: int = 240):
     df = pd.DataFrame()
     df['Date'] = df_close['Date']
     df['Name'] = ticker
@@ -56,9 +62,28 @@ def create_stock_data(df_open, df_close, label, ticker: str, test_year: int, win
     test = df[df['Year'] == test_year].drop(columns=['Month', 'Year'])
     return np.array(train), np.array(test)
 
+def create_stock_data_Intraday_1f(df_open, df_close, label, ticker: str, test_year: int, window: int = 240):
+    df = pd.DataFrame()
+    df['Date'] = df_close['Date']
+    df['Name'] = ticker
 
-def scalar_normalize(train_data, test_data):
-    scaler = RobustScaler()
-    scaler.fit(train_data[:, 2:-2])
-    train_data[:, 2:-2] = scaler.transform(train_data[:, 2:-2])
-    test_data[:, 2:-2] = scaler.transform(test_data[:, 2:-2])
+    daily_change = df_close[ticker] / df_open[ticker] - 1
+
+    # Tạo dict cho từng nhóm đặc trưng
+    intra_features = {f'IntraR{k}': daily_change.shift(k) for k in range(window)[::-1]}
+
+    # Gộp tất cả vào DataFrame
+    df = pd.concat([df,
+                    pd.DataFrame(intra_features)],
+                   axis=1)
+
+    df['IntraR-future'] = daily_change.shift(-1)
+    df['label'] = label[ticker].values.tolist() + [np.nan]
+    df['Month'] = df['Date'].str[:7]
+
+    df = df.dropna()
+    df['Year'] = df['Month'].str[:4].astype(int)
+
+    train = df[df['Year'] < test_year].drop(columns=['Month', 'Year'])
+    test = df[df['Year'] == test_year].drop(columns=['Month', 'Year'])
+    return np.array(train), np.array(test)
