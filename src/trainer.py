@@ -82,13 +82,14 @@ def predictor_RF(model, test_data):
         predictions[day] = model.predict_proba(test_d)[:, 1]
     return predictions
 
-def trainer_RF(train_data, test_data, MAX_DEPTH=10):
+def trainer_RF(train_data, test_data, MAX_DEPTH=10, SEED=727):
     train_x, train_y = train_data[:, 2:-2], train_data[:, -1]
     train_y = train_y.astype('int')
 
     print('Started training')
     clf = RandomForestClassifier(n_estimators=1000,
                                  max_depth=MAX_DEPTH,
+                                 random_state=SEED,
                                  n_jobs=-1)
     clf.fit(train_x, train_y)
     print('Completed ', clf.score(train_x, train_y))

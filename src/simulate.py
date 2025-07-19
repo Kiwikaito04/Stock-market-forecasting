@@ -12,5 +12,5 @@ def simulate(test_data, predictions, k=10):
         worst_preds = predictions[day].argsort()[:k][::-1]
         trans_short = -test_returns[worst_preds]
         rets.loc[day] = [np.mean(trans_long), np.mean(trans_short)]
-    print('Result : ', rets.mean())
+    print('Result : \n', rets.mean())
     return rets
