@@ -154,3 +154,26 @@ def create_stock_data_RF_Intraday_3f(df_open, df_close, label, ticker: str, test
     train_data = df[trade_year < str(test_year)]
     test_data = df[trade_year == str(test_year)]
     return np.array(train_data), np.array(test_data)
+
+
+def create_stock_data_RF_Intraday_1f(df_open, df_close, label, ticker: str, test_year: int, window: int = 240):
+    df = pd.DataFrame([])
+    df['Date'] = list(df_close['Date'])
+    df['Name'] = ticker
+
+    daily_change = df_close[ticker] / df_open[ticker] - 1
+    m = list(range(1, 20)) + list(range(20, 241, 20))
+
+    for k in m:
+        df['IntraR' + str(k)] = df_close[ticker].shift(1) / df_open[ticker].shift(k) - 1
+
+    df['R-future'] = daily_change
+    df['label'] = list(label[ticker])
+    df['Month'] = list(df_close['Date'].str[:-3])
+    df = df.dropna()
+
+    trade_year = df['Month'].str[:4]
+    df = df.drop(columns=['Month'])
+    train_data = df[trade_year < str(test_year)]
+    test_data = df[trade_year == str(test_year)]
+    return np.array(train_data), np.array(test_data)
