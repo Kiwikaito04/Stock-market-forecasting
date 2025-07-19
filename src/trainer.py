@@ -2,10 +2,44 @@ import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier
 
-
 from src.features import reshaper
-from src.models import LSTM_Model, create_callbacks
 
+import tensorflow as tf
+from tensorflow.keras.layers import LSTM, Dropout, Dense, Input
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
+from tensorflow.keras.models import Model, Sequential, load_model
+from tensorflow.keras import optimizers
+
+
+##############
+#       LSTM
+##############
+
+# =================== Model LSTM =================== #
+class LSTM_Model:
+    def __init__(self, features=3, time_steps=240):
+        self.inputs = Input(shape=(time_steps, features))
+        x = LSTM(25, return_sequences=False)(self.inputs)
+        x = Dropout(0.1)(x)
+        self.outputs = Dense(2, activation='softmax')(x)
+
+    def makeLSTM(self):
+        model = Model(inputs=self.inputs, outputs=self.outputs)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=optimizers.RMSprop(),
+                      metrics=['accuracy'])
+        model.summary()
+        return model
+
+
+def create_callbacks(test_year, model_type='LSTM', folder='models'):
+    csv_logger = CSVLogger(f"{folder}/training-log-{model_type}-{test_year}.csv")
+    checkpoint = ModelCheckpoint(f"{folder}/model-{model_type}-{test_year}-E{{epoch:02d}}.keras",
+                                 monitor='val_loss', save_best_only=False)
+    early_stop = EarlyStopping(monitor='val_loss', mode='min', patience=10, restore_best_weights=True)
+    return [csv_logger, early_stop, checkpoint]
+
+# =================== Trainer LSTM =================== #
 def predictor_3f(model, test_data):
     dates = list(set(test_data[:, 0]))
     predictions = {}
@@ -14,6 +48,7 @@ def predictor_3f(model, test_data):
         test_d = reshaper(test_d[:, 2:-2]).astype('float32')
         predictions[day] = model.predict(test_d)[:, 1]
     return predictions
+
 
 # LSTM Intraday, 3 features, 240 timestep
 def trainer_LSTM_I3f240(train_data, test_data, test_year, folder_save='models'):
@@ -41,6 +76,7 @@ def trainer_LSTM_I3f240(train_data, test_data, test_year, folder_save='models'):
 
     return model, predictor_3f(model, test_data)
 
+
 def predictor_1f(model, test_data):
     dates = list(set(test_data[:, 0]))
     predictions = {}
@@ -49,6 +85,7 @@ def predictor_1f(model, test_data):
         test_d = np.reshape(test_d[:,2:-2], (len(test_d),240,1)).astype('float32')
         predictions[day] = model.predict(test_d)[:, 1]
     return predictions
+
 
 def trainer_LSTM_I1f240(train_data, test_data, test_year, folder_save='models'):
     np.random.shuffle(train_data)
@@ -73,6 +110,12 @@ def trainer_LSTM_I1f240(train_data, test_data, test_year, folder_save='models'):
 
     return model, predictor_1f(model, test_data)
 
+
+##############
+#       RF
+##############
+
+# =================== Model & Trainer RF =================== #
 def predictor_RF(model, test_data):
     dates = list(set(test_data[:, 0]))
     predictions = {}
@@ -82,7 +125,8 @@ def predictor_RF(model, test_data):
         predictions[day] = model.predict_proba(test_d)[:, 1]
     return predictions
 
-def trainer_RF(train_data, test_data, MAX_DEPTH=10, SEED=727):
+
+def trainer_RF(train_data, test_data, MAX_DEPTH=10, SEED=42):
     train_x, train_y = train_data[:, 2:-2], train_data[:, -1]
     train_y = train_y.astype('int')
 
