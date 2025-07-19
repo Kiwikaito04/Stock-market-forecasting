@@ -42,7 +42,7 @@ def create_stock_data_LSTM_Intraday_3f(df_open, df_close, label, ticker: str, te
 
     daily_change = df_close[ticker] / df_open[ticker] - 1
     nextday_ret = df_open[ticker].shift(-1) / df_close[ticker] - 1
-    close_change = df_close[ticker].pct_change()
+    close_change = df_close[ticker].pct_change(fill_method=None)
 
     # Tạo dict cho từng nhóm đặc trưng
     intra_features = {f'IntraR{k}': daily_change.shift(k) for k in range(window)[::-1]}
@@ -98,7 +98,7 @@ def create_stock_data_LSTM_NextDay_1f(df_close, label, ticker: str, test_year: i
     df['Date'] = df_close['Date']
     df['Name'] = ticker
 
-    daily_change = df_close[ticker].pct_change()
+    daily_change = df_close[ticker].pct_change(fill_method=None)
 
     # Tạo dict cho từng nhóm đặc trưng
     intra_features = {f'R{k}': daily_change.shift(k) for k in range(window)[::-1]}
@@ -140,7 +140,7 @@ def create_stock_data_RF_Intraday_3f(df_open, df_close, label, ticker: str, test
     for k in m:
         df['IntraR'+str(k)] = daily_change.shift(k)
     for k in m:
-        df['CloseR'+str(k)] = df_close[ticker].pct_change(k).shift(1)
+        df['CloseR'+str(k)] = df_close[ticker].pct_change(k, fill_method=None).shift(1)
     for k in m:
         df['OverNR'+str(k)] = df_open[ticker]/df_close[ticker].shift(k)-1
 
