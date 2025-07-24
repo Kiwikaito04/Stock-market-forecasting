@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier
 
-from src.features import reshaper
+from src.create_stock_data import reshaper
 
 import tensorflow as tf
 from tensorflow.keras.layers import LSTM, Dropout, Dense, Input
@@ -35,28 +35,28 @@ class LSTM_Model:
 def create_callbacks(test_year, model_type='LSTM', folder='models'):
     csv_logger = CSVLogger(f"{folder}/training-log-{model_type}-{test_year}.csv")
     checkpoint = ModelCheckpoint(f"{folder}/model-{model_type}-{test_year}-E{{epoch:02d}}.keras",
-                                 monitor='val_loss', save_best_only=False)
+                                 monitor='val_loss', save_best_only=True)
     early_stop = EarlyStopping(monitor='val_loss', mode='min', patience=10, restore_best_weights=True)
     return [csv_logger, early_stop, checkpoint]
 
 # =================== Trainer LSTM =================== #
-def predictor_3f(model, test_data):
+def predictor_3f(model, test_data, features):
     dates = list(set(test_data[:, 0]))
     predictions = {}
     for day in dates:
         test_d = test_data[test_data[:, 0] == day]
-        test_d = reshaper(test_d[:, 2:-2]).astype('float32')
+        test_d = reshaper(test_d[:, 2:-2], features=features).astype('float32')
         predictions[day] = model.predict(test_d)[:, 1]
     return predictions
 
 
 # LSTM Intraday, 3 features, 240 timestep
-def trainer_LSTM_I3f240(train_data, test_data, test_year, folder_save='models'):
+def trainer_LSTM_I3f240(train_data, test_data, test_year, features=3, folder_save='models'):
     np.random.shuffle(train_data)
 
     # Các đặc trưng / Nhãn / Lợi nhuận thực tế
     train_x, train_y, train_ret = train_data[:, 2:-2], train_data[:, -1], train_data[:, -2]
-    train_x = reshaper(train_x).astype('float32')
+    train_x = reshaper(train_x, features=features).astype('float32')
     train_y = np.reshape(train_y, (-1, 1))
     train_ret = np.reshape(train_ret, (-1, 1))
     enc = OneHotEncoder(handle_unknown='ignore')
@@ -64,7 +64,7 @@ def trainer_LSTM_I3f240(train_data, test_data, test_year, folder_save='models'):
     enc_y = enc.transform(train_y).toarray()
     train_ret = np.hstack((np.zeros((len(train_data), 1)), train_ret))
 
-    model = LSTM_Model(features=3, time_steps=240).makeLSTM()
+    model = LSTM_Model(features=features, time_steps=240).makeLSTM()
     CALLBACK = create_callbacks(test_year, folder=folder_save)
 
     model.fit(train_x, enc_y,
@@ -74,7 +74,7 @@ def trainer_LSTM_I3f240(train_data, test_data, test_year, folder_save='models'):
               callbacks=CALLBACK,
               verbose=2)
 
-    return model, predictor_3f(model, test_data)
+    return model, predictor_3f(model, test_data, features)
 
 
 def predictor_1f(model, test_data):
