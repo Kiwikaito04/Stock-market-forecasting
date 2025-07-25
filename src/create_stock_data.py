@@ -30,7 +30,7 @@ def create_label_LSTM_Intraday(df_open, df_close, perc=[0.5, 0.5]):
     return label[1:]  # bỏ ngày đầu tiên vì không có giá trị trước đó
 
 
-def create_label_LSTM_NextDay(df_close, perc=[0.5, 0.5]):
+def create_label_NextDay(df_close, perc=[0.5, 0.5]):
     perc = [0.] + list(np.cumsum(perc))
     label = df_close.iloc[:, 1:].pct_change(fill_method=None)[1:].apply(
         lambda x: pd.qcut(x.rank(method='first'), perc, labels=False), axis=1)
@@ -206,6 +206,28 @@ def create_stock_data_RF_Intraday_1f(df_open, df_close, label, ticker: str, test
 
     df['R-future'] = daily_change
     df['label'] = list(label[ticker])
+    df['Month'] = list(df_close['Date'].str[:-3])
+    df = df.dropna()
+
+    trade_year = df['Month'].str[:4]
+    df = df.drop(columns=['Month'])
+    train_data = df[trade_year < str(test_year)]
+    test_data = df[trade_year == str(test_year)]
+    return np.array(train_data), np.array(test_data)
+
+
+def create_stock_data_RF_NextDay_1f(df_close, label, ticker: str, test_year: int, window: int = 240):
+    df = pd.DataFrame([])
+    df['Date'] = list(df_close['Date'])
+    df['Name'] = ticker
+
+    m = list(range(1, 20)) + list(range(20, 241, 20))
+
+    for k in m:
+        df['R' + str(k)] = df_close[ticker].pct_change(k)
+
+    df['R-future'] = df_close[ticker].pct_change().shift(-1)
+    df['label'] = list(label[ticker]) + [np.nan]
     df['Month'] = list(df_close['Date'].str[:-3])
     df = df.dropna()
 
