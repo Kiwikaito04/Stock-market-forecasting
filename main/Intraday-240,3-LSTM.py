@@ -9,7 +9,7 @@ from src.data import fetch_yfinance_data
 from src.create_stock_data import create_label_LSTM_Intraday, create_stock_data_LSTM_Intraday_3f, scalar_normalize, reshaper
 from src.simulate import simulate
 from src.Statistics import Statistics
-from src.trainer import trainer_LSTM_I3f240
+from src.trainer import trainer_LSTM_240
 from ticker_list import get_ticker_name
 
 
@@ -32,7 +32,9 @@ os.environ['PYTHONHASHSEED']=str(SEED)
 random.seed(SEED)
 np.random.seed(SEED)
 
+
 summary_rows = []
+
 
 for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
     print(f"\n{'='*20} Testing {test_year} {'='*20}\n")
@@ -59,7 +61,7 @@ for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
     scalar_normalize(train_data, test_data)
 
     # Huấn luyện mô hình và đưa ra dự đoán, kiểm tra kết quả
-    model, predictions = trainer_LSTM_I3f240(train_data, test_data, test_year, features=3, folder_save=MODEL_FOLDER)
+    model, predictions = trainer_LSTM_240(train_data, test_data, test_year, features=3, folder_save=MODEL_FOLDER)
     returns = simulate(test_data, predictions, k=10)
     returns.to_csv(f"{RESULT_FOLDER}/daily_rets_{test_year}.csv")
 
@@ -86,7 +88,7 @@ for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
     })
 
     # Save model with specific name
-    # model.save(os.path.join(MODEL_FOLDER, f"model-LSTM-{test_year}-final.keras"))
+    model.save(os.path.join(MODEL_FOLDER, f"model-LSTM-{test_year}-final.keras"))
 
 
 summary_df = pd.DataFrame(summary_rows)
