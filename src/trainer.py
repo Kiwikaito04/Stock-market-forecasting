@@ -44,8 +44,8 @@ from tensorflow.keras import optimizers
 class LSTM_Attention_Model:
     def __init__(self, features=3, time_steps=240):
         self.inputs = Input(shape=(time_steps, features))     # (240, 3)
-        x = LSTM(64, return_sequences=True)(self.inputs)      # output: (240, 64)
-        x = Attention()(x)                                    # output: (64,)
+        x = LSTM(25, return_sequences=False)(self.inputs)      # output: (240, 1)
+        x = Attention()(x)                                    # output: (1,)
         x = Dropout(0.1)(x)
         self.outputs = Dense(2, activation='softmax')(x)
 
