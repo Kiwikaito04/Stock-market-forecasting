@@ -19,28 +19,21 @@ from tensorflow.keras import optimizers
 from tensorflow.keras.layers import Layer
 import tensorflow.keras.backend as K
 from tensorflow.keras.initializers import GlorotUniform
+from tensorflow.keras.layers import Layer, Dense, Softmax
+import tensorflow.keras.backend as K
 
 
 class Attention(Layer):
     def __init__(self):
         super(Attention, self).__init__()
-
-    def build(self, input_shape):
-        self.W = self.add_weight(name="att_weight",
-                                 shape=(input_shape[-1], 1),
-                                 initializer=GlorotUniform(),
-                                 trainable=True)
-        self.b = self.add_weight(name="att_bias",
-                                 shape=(input_shape[1], 1),
-                                 initializer="zeros",
-                                 trainable=True)
-        super().build(input_shape)
+        self.score_dense = Dense(1, activation='tanh')  # learnable scoring function
+        self.softmax = Softmax(axis=1)  # across timesteps
 
     def call(self, x):
-        e = K.tanh(K.dot(x, self.W) + self.b)       # (batch, time_steps, 1)
-        a = K.softmax(e, axis=1)                    # attention weights
-        output = x * a                              # (batch, time_steps, features)
-        return K.sum(output, axis=1)                # (batch, features)
+        scores = self.score_dense(x)            # shape: (batch, time_steps, 1)
+        weights = self.softmax(scores)          # shape: (batch, time_steps, 1)
+        context = K.sum(x * weights, axis=1)    # shape: (batch, features)
+        return context
 
 
 from tensorflow.keras.models import Model
@@ -51,8 +44,8 @@ from tensorflow.keras import optimizers
 class LSTM_Attention_Model:
     def __init__(self, features=3, time_steps=240):
         self.inputs = Input(shape=(time_steps, features))     # (240, 3)
-        x = LSTM(25, return_sequences=True)(self.inputs)      # output: (240, 25)
-        x = Attention()(x)                                    # output: (25,)
+        x = LSTM(64, return_sequences=True)(self.inputs)      # output: (240, 64)
+        x = Attention()(x)                                    # output: (64,)
         x = Dropout(0.1)(x)
         self.outputs = Dense(2, activation='softmax')(x)
 
