@@ -131,6 +131,7 @@ def plot_cumulative_returns_comparison(result_paths: dict, segments: list[tuple[
 # Sử dụng:
 # ===========================
 RESULT_PATHS = {
+    "LSTM-Attention Intra 3-features": "main/ayaya/results-Intraday-240-3-LSTM-Attention",
     "LSTM Intra 3-features": "main/ayaya/results-Intraday-240-3-LSTM",
     # "LSTM Intra 1-feature": "main/ayaya/results-Intraday-240-1-LSTM",
     "LSTM NextDay 1-feature": "main/ayaya/results-NextDay-240-1-LSTM",
