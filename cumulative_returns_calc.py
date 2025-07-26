@@ -50,7 +50,7 @@ def prepare_combined_data(result_paths: dict, start_year: int, end_year: int) ->
     return combined
 
 
-def plot_segment(segment_data: pd.DataFrame, seg_start: int, seg_end: int):
+def plot_cumulative_returns(segment_data: pd.DataFrame, seg_start: int, seg_end: int):
     plt.figure(figsize=(12, 6))
     for label in segment_data['label'].unique():
         subset = segment_data[segment_data['label'] == label].copy()
@@ -58,15 +58,46 @@ def plot_segment(segment_data: pd.DataFrame, seg_start: int, seg_end: int):
         subset['cumulative_return'] = subset['return'].cumsum()
         plt.plot(subset['day'], subset['cumulative_return'], label=label)
 
-    plt.title(f"Lãi tích lũy từ {seg_start} đến {seg_end}")
+    plt.title(f"Phần trăm lãi tích lũy (sau phí giao dịch) - Từ {seg_start} đến {seg_end}")
     plt.xlabel("Ngày")
-    plt.ylabel("Lãi tích lũy")
+    plt.ylabel("Lãi tích lũy (đơn vị: %)")
     plt.grid(True)
     plt.legend()
 
     ax = plt.gca()
     ax.xaxis.set_major_locator(mdates.YearLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_avg_daily_returns_bar(segment_data: pd.DataFrame, seg_start: int, seg_end: int):
+    """
+    Vẽ biểu đồ cột thể hiện lợi suất trung bình mỗi ngày theo từng năm.
+    """
+    avg_returns = (
+        segment_data.groupby(['label', 'year'])['return']
+        .mean()
+        .reset_index()
+    )
+
+    # Chuyển lợi suất thành phần trăm
+    avg_returns['return'] *= 100
+
+    pivot_df = avg_returns.pivot(index='year', columns='label', values='return')
+    pivot_df = pivot_df.loc[seg_start:seg_end]
+
+    ax = pivot_df.plot(kind='bar', figsize=(12, 6))
+    plt.title(f"Lợi suất trung bình mỗi ngày theo năm - Từ {seg_start} đến {seg_end}")
+    plt.xlabel("Năm")
+    plt.ylabel("Lợi suất trung bình mỗi ngày")
+    plt.grid(axis='y')
+    plt.xticks(rotation=0)
+    plt.legend(title="Mô hình")
+
+    # Định dạng y-axis thành %
+    ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda y, _: f'{y:.2f}%'))
 
     plt.tight_layout()
     plt.show()
@@ -87,9 +118,9 @@ def plot_money_growth_segment(segment_data: pd.DataFrame, seg_start: int, seg_en
 
         plt.plot(subset['day'], subset['money'], label=label)
 
-    plt.title(f"Tăng trưởng số tiền từ {seg_start} đến {seg_end} (Giả sử đầu tư 1 đơn vị)")
-    plt.xlabel("Ngày")
-    plt.ylabel("Số tiền tích lũy")
+    plt.title(f"Biểu đồ tăng trưởng tiền tích lũy (sau phí giao dịch) - Từ {seg_start} đến {seg_end}")
+    plt.xlabel("Năm")
+    plt.ylabel("Số tiền tích lũy (đơn vị: $)")
     plt.grid(True)
     plt.legend()
 
@@ -123,7 +154,8 @@ def plot_cumulative_returns_comparison(result_paths: dict, segments: list[tuple[
     for seg_start, seg_end in segments:
         segment_data = combined[(combined['year'] >= seg_start) & (combined['year'] <= seg_end)]
         if not segment_data.empty:
-            # plot_segment(segment_data, seg_start, seg_end)
+            plot_cumulative_returns(segment_data, seg_start, seg_end)
+            plot_avg_daily_returns_bar(segment_data, seg_start, seg_end)
             plot_money_growth_segment(segment_data, seg_start, seg_end)
 
 
