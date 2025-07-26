@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
+# CẢNH BÁO: include_technical_indicators đã KHÔNG được cập nhật và thử nghiệm, có thể phát sinh lỗi
+
 
 def compute_technical_indicators(df_close, period_sma=20, period_rsi=14, period_bb=20):
     indicators = pd.DataFrame()
@@ -58,19 +60,23 @@ def fetch_yfinance_data(tickers, start_date, end_date, include_technical_indicat
         ticker_data = data.get(ticker)
         if ticker_data is None:
             continue
-        if ticker_data['Open'].dropna().empty or ticker_data['Close'].dropna().empty:
+        open_series = ticker_data['Open']
+        close_series = ticker_data['Close']
+
+        # Nếu toàn bộ dữ liệu là NaN thì bỏ qua
+        if open_series.isna().all() or close_series.isna().all():
             continue
 
         valid_tickers.append(ticker)
-        open_list.append(data[ticker]['Open'].rename(ticker))
-        close_list.append(data[ticker]['Close'].rename(ticker))
+        open_list.append(open_series.rename(ticker))
+        close_list.append(close_series.rename(ticker))
 
     print(f"[INFO] fetch_yfinance_data(): Lấy thành công dữ liệu cho {len(valid_tickers)}/{len(tickers)} mã.")
 
     if not valid_tickers:
         return pd.DataFrame(), pd.DataFrame()
 
-    # Dùng concat một lần thay vì insert tuần tự (tránh fragmented warning)
+    # Gộp các series lại
     df_open = pd.concat(open_list, axis=1)
     df_close = pd.concat(close_list, axis=1)
 
@@ -86,7 +92,7 @@ def fetch_yfinance_data(tickers, start_date, end_date, include_technical_indicat
     if include_technical_indicators:
         df_tech = compute_technical_indicators(df_close)
         df_tech = df_tech[df_tech['Date'] >= start_date].reset_index(drop=True)
-        return df_open, df_close, df_tech
+        return valid_tickers, df_open, df_close, df_tech
     else:
-        return df_open, df_close
+        return valid_tickers, df_open, df_close
 
