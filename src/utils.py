@@ -13,6 +13,16 @@ def get_ticker_name():
         return []
 
 
+def get_valid_tickers(path="valid_tickers.csv"):
+    try:
+        tickers = pd.read_csv(path, header=None).squeeze().dropna().unique().tolist()
+        tickers = [t.replace('.', '-') for t in tickers]  # Chuẩn hóa tên ticker (nếu cần)
+        return tickers
+    except Exception as e:
+        print(f"[ERROR] get_valid_tickers(): {e}")
+        return []
+
+
 def get_default_ticker_name():
     return [
         'AAPL',   # Apple - Công nghệ
