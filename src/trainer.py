@@ -118,13 +118,31 @@ def create_callbacks(test_year, model_type='LSTM', folder='models'):
     return [csv_logger, early_stop, checkpoint]
 
 # =================== Trainer LSTM =================== #
+# def predictor_LSTM(model, test_data, features):
+#     dates = list(set(test_data[:, 0]))
+#     predictions = {}
+#     for day in dates:
+#         test_d = test_data[test_data[:, 0] == day]
+#         test_d = reshaper(test_d[:, 2:-2], features=features).astype('float32')
+#         predictions[day] = model.predict(test_d)[:, 1]
+#     return predictions
 def predictor_LSTM(model, test_data, features):
-    dates = list(set(test_data[:, 0]))
+    # Dữ liệu đầu vào
+    all_x = test_data[:, 2:-2]
+    all_dates = test_data[:, 0]
+
+    # Reshape toàn bộ input một lần
+    all_x_reshaped = reshaper(all_x, features=features).astype('float32')
+
+    # Predict một lần cho toàn bộ tập
+    y_pred = model.predict(all_x_reshaped, verbose=0)[:, 1]  # Lấy xác suất class 1
+
+    # Gom theo từng ngày
     predictions = {}
-    for day in dates:
-        test_d = test_data[test_data[:, 0] == day]
-        test_d = reshaper(test_d[:, 2:-2], features=features).astype('float32')
-        predictions[day] = model.predict(test_d)[:, 1]
+    for day in np.unique(all_dates):
+        mask = all_dates == day
+        predictions[day] = y_pred[mask]
+
     return predictions
 
 
