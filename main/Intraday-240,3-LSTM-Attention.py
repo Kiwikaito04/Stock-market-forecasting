@@ -12,7 +12,7 @@ from src.create_stock_data import create_label_LSTM_Intraday, create_stock_data_
 from src.simulate import simulate
 from src.Statistics import Statistics
 from src.trainer import trainer_LSTM_240
-from ticker_list import get_ticker_name
+from src.utils import get_ticker_name
 
 
 # DATA CONFIGURATION

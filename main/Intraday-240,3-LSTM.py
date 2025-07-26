@@ -10,7 +10,7 @@ from src.create_stock_data import create_label_LSTM_Intraday, create_stock_data_
 from src.simulate import simulate
 from src.Statistics import Statistics
 from src.trainer import trainer_LSTM_240
-from ticker_list import get_ticker_name
+from src.utils import get_ticker_name
 
 
 # DATA CONFIGURATION
@@ -20,8 +20,8 @@ WINDOW_SIZE = 3
 
 
 # CHECKPOINT CONFIGURATION
-MODEL_FOLDER = 'ayaya/models-Intraday-240-3-LSTM'
-RESULT_FOLDER = 'ayaya/results-Intraday-240-3-LSTM'
+MODEL_FOLDER = 'test-ayaya/models-Intraday-240-3-LSTM'
+RESULT_FOLDER = 'test-ayaya/results-Intraday-240-3-LSTM'
 os.makedirs(MODEL_FOLDER, exist_ok=True)
 os.makedirs(RESULT_FOLDER, exist_ok=True)
 

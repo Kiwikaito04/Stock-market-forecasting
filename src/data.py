@@ -41,7 +41,6 @@ def fetch_yfinance_data(tickers, start_date, end_date, include_technical_indicat
     start_dt = datetime.strptime(start_date, "%Y-%m-%d") - timedelta(days=30)
     start_buffer = start_dt.strftime("%Y-%m-%d")
 
-    # Dùng join(',') để gộp thành chuỗi cho yfinance tải batch
     data = yf.download(
         tickers=' '.join(tickers),
         start=start_buffer,
@@ -52,19 +51,34 @@ def fetch_yfinance_data(tickers, start_date, end_date, include_technical_indicat
         threads=True
     )
 
-    df_open, df_close = pd.DataFrame(), pd.DataFrame()
+    open_list, close_list = [], []
+    valid_tickers = []
 
     for ticker in tickers:
-        if ticker not in data.columns.levels[0]:
-            continue  # ticker không có dữ liệu
-        df_open[ticker] = data[ticker]['Open']
-        df_close[ticker] = data[ticker]['Close']
+        ticker_data = data.get(ticker)
+        if ticker_data is None:
+            continue
+        if ticker_data['Open'].dropna().empty or ticker_data['Close'].dropna().empty:
+            continue
+
+        valid_tickers.append(ticker)
+        open_list.append(data[ticker]['Open'].rename(ticker))
+        close_list.append(data[ticker]['Close'].rename(ticker))
+
+    print(f"[INFO] fetch_yfinance_data(): Lấy thành công dữ liệu cho {len(valid_tickers)}/{len(tickers)} mã.")
+
+    if not valid_tickers:
+        return pd.DataFrame(), pd.DataFrame()
+
+    # Dùng concat một lần thay vì insert tuần tự (tránh fragmented warning)
+    df_open = pd.concat(open_list, axis=1)
+    df_close = pd.concat(close_list, axis=1)
 
     # Chuyển index thành Date
-    df_open.insert(0, 'Date', df_close.index.strftime('%Y-%m-%d'))
+    df_open.insert(0, 'Date', df_open.index.strftime('%Y-%m-%d'))
     df_close.insert(0, 'Date', df_close.index.strftime('%Y-%m-%d'))
 
-    # Cắt bỏ buffer để đảm bảo ngày bắt đầu đúng
+    # Cắt bỏ buffer
     mask = df_close['Date'] >= start_date
     df_open = df_open[mask].reset_index(drop=True)
     df_close = df_close[mask].reset_index(drop=True)
