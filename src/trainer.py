@@ -183,13 +183,27 @@ def trainer_LSTM_240(train_data, test_data, test_year, features=3, folder_save='
 ##############
 
 # =================== Model & Trainer RF =================== #
+# def predictor_RF(model, test_data):
+#     dates = list(set(test_data[:, 0]))
+#     predictions = {}
+#     for day in dates:
+#         test_d = test_data[test_data[:, 0] == day]
+#         test_d = test_d[:, 2:-2]
+#         predictions[day] = model.predict_proba(test_d)[:, 1]
+#     return predictions
 def predictor_RF(model, test_data):
-    dates = list(set(test_data[:, 0]))
+    all_x = test_data[:, 2:-2]
+    all_dates = test_data[:, 0]
+
+    # Dự đoán xác suất class 1 một lần duy nhất
+    y_pred = model.predict_proba(all_x)[:, 1]
+
+    # Gom kết quả lại theo từng ngày
     predictions = {}
-    for day in dates:
-        test_d = test_data[test_data[:, 0] == day]
-        test_d = test_d[:, 2:-2]
-        predictions[day] = model.predict_proba(test_d)[:, 1]
+    for day in np.unique(all_dates):
+        mask = all_dates == day
+        predictions[day] = y_pred[mask]
+
     return predictions
 
 
