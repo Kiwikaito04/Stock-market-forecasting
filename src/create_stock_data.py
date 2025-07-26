@@ -224,9 +224,9 @@ def create_stock_data_RF_NextDay_1f(df_close, label, ticker: str, test_year: int
     m = list(range(1, 20)) + list(range(20, 241, 20))
 
     for k in m:
-        df['R' + str(k)] = df_close[ticker].pct_change(k)
+        df['R' + str(k)] = df_close[ticker].pct_change(k, fill_method=None)
 
-    df['R-future'] = df_close[ticker].pct_change().shift(-1)
+    df['R-future'] = df_close[ticker].pct_change(fill_method=None).shift(-1)
     df['label'] = list(label[ticker]) + [np.nan]
     df['Month'] = list(df_close['Date'].str[:-3])
     df = df.dropna()
