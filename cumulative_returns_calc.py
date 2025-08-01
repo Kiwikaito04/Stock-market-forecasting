@@ -19,7 +19,15 @@ def load_returns_from_folder(folder_path, label, start_year, end_year):
             df.index = pd.to_datetime(df.index)
 
             if 'Long' in df.columns and 'Short' in df.columns:
-                df['return'] = (df['Long'] + df['Short']) * (1 - TRANSACTION_COST)
+                # tính PnL gộp
+                pnl = df['Long'] + df['Short']
+
+                # total turnover = |Long| + |Short|
+                turnover = df['Long'].abs() + df['Short'].abs()
+
+                # trừ phí giao dịch đúng cho cả trường hợp pnl dương hoặc âm
+                df['return'] = pnl - TRANSACTION_COST * turnover
+
                 df = df.reset_index().rename(columns={'index': 'day'})
                 all_returns.append(df[['day', 'return']])
             else:
