@@ -5,42 +5,46 @@ import random
 
 import pandas as pd
 
-from mint.data import fetch_yfinance_data
+from mint.data import DataLoader
 from mint.create_stock_data import create_label_RF_Intraday, create_stock_data_RF_Intraday_1f
 from mint.simulate import simulate
 from mint.Statistics import Statistics
 from mint.trainer import trainer_RF
-from mint.utils import get_ticker_name
 
 
 # DATA CONFIGURATION
-TICKERS = get_ticker_name()
 START_YEAR, END_YEAR = 1990, 2018
 WINDOW_SIZE = 3
+
 
 # CHECKPOINT CONFIGURATION
 MODEL_FOLDER = 'ayaya/models-Intraday-240-1-RF'
 RESULT_FOLDER = 'ayaya/results-Intraday-240-1-RF'
+DATA_FOLDER = '../dataset'
+
 os.makedirs(MODEL_FOLDER, exist_ok=True)
 os.makedirs(RESULT_FOLDER, exist_ok=True)
+os.makedirs(DATA_FOLDER, exist_ok=True)
 
 
+# RANDOM SEED SETUP
 SEED = 727
 os.environ['PYTHONHASHSEED']=str(SEED)
 random.seed(SEED)
 np.random.seed(SEED)
 
 
+dataloader = DataLoader(DATA_FOLDER, START_YEAR, END_YEAR)
 summary_rows = []
 
 
+# ======================== CHẠY QUA TỪNG NĂM ========================
 for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
     print(f"\n{'='*20} Testing {test_year} {'='*20}\n")
 
-    start_date = f"{test_year - WINDOW_SIZE}-01-01"
-    end_date = f"{test_year}-12-31"
-
-    df_open, df_close = fetch_yfinance_data(TICKERS, start_date, end_date)
+    # Lấy dữ liệu
+    print("[DEBUG] Khởi tạo tập dữ liệu...")
+    TICKERS, df_open, df_close = dataloader.get_open_close_window(test_year - WINDOW_SIZE, test_year)
     label = create_label_RF_Intraday(df_open, df_close)
 
     train_data, test_data = [], []
@@ -55,6 +59,7 @@ for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
 
     train_data = np.concatenate(train_data)
     test_data = np.concatenate(test_data)
+    print("[DEBUG] Hoàn tất.")
 
     model, predictions = trainer_RF(train_data, test_data, SEED=SEED)
     returns = simulate(test_data, predictions)

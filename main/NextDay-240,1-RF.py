@@ -5,23 +5,21 @@ import random
 
 import pandas as pd
 
-from mint.data import fetch_yfinance_data
+from mint.data import DataLoader
 from mint.create_stock_data import create_label_NextDay, create_stock_data_RF_NextDay_1f
 from mint.simulate import simulate
 from mint.Statistics import Statistics
 from mint.trainer import trainer_RF
-from mint.utils import get_ticker_name, get_valid_tickers
 
 
 # DATA CONFIGURATION
-TICKERS = get_ticker_name()
 START_YEAR, END_YEAR = 1990, 2018
 WINDOW_SIZE = 3
 
 # CHECKPOINT CONFIGURATION
 MODEL_FOLDER = 'ayaya/models-NextDay-240-1-RF'
 RESULT_FOLDER = 'ayaya/results-NextDay-240-1-RF'
-DATA_FOLDER = 'dataset'
+DATA_FOLDER = '../dataset'
 
 os.makedirs(MODEL_FOLDER, exist_ok=True)
 os.makedirs(RESULT_FOLDER, exist_ok=True)
@@ -34,24 +32,7 @@ random.seed(SEED)
 np.random.seed(SEED)
 
 
-# ======================== TẢI DỮ LIỆU 1 LẦN ========================
-data_open_path = os.path.join(DATA_FOLDER, "df_open.csv")
-data_close_path = os.path.join(DATA_FOLDER, "df_close.csv")
-valid_tickers_path = os.path.join(DATA_FOLDER, "valid_tickers.csv")
-
-if os.path.exists(data_open_path) and os.path.exists(data_close_path):
-    df_open_all = pd.read_csv(data_open_path)
-    df_close_all = pd.read_csv(data_close_path)
-    TICKERS = get_valid_tickers(valid_tickers_path)
-    print("[INFO] Đã tải dữ liệu từ file CSV.")
-else:
-    TICKERS, df_open_all, df_close_all = fetch_yfinance_data(TICKERS, f"{START_YEAR}-01-01", f"{END_YEAR}-12-31")
-    # df_open_all.to_csv(data_open_path, index=False)
-    df_close_all.to_csv(data_close_path, index=False)
-    pd.Series(TICKERS).to_csv(valid_tickers_path, index=False, header=False)
-    print("[INFO] Đã lưu dữ liệu vào CSV.")
-
-
+dataloader = DataLoader(DATA_FOLDER, START_YEAR, END_YEAR)
 summary_rows = []
 
 
@@ -59,14 +40,9 @@ summary_rows = []
 for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
     print(f"\n{'='*20} Testing {test_year} {'='*20}\n")
 
-    start_date = f"{test_year - WINDOW_SIZE}-01-01"
-    end_date = f"{test_year}-12-31"
-
-    # Lọc dữ liệu theo ngày
-    mask = (df_close_all['Date'] >= start_date) & (df_close_all['Date'] <= end_date)
-    # df_open = df_open_all[mask].reset_index(drop=True)
-    df_close = df_close_all[mask].reset_index(drop=True)
-
+    # Lấy dữ liệu
+    print("[DEBUG] Khởi tạo tập dữ liệu...")
+    TICKERS, _, df_close = dataloader.get_open_close_window(test_year - WINDOW_SIZE, test_year)
     label = create_label_NextDay(df_close)
 
     train_data, test_data = [], []
@@ -81,6 +57,7 @@ for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
 
     train_data = np.concatenate(train_data)
     test_data = np.concatenate(test_data)
+    print("[DEBUG] Hoàn tất.")
 
     model, predictions = trainer_RF(train_data, test_data, SEED=SEED)
     returns = simulate(test_data, predictions)
