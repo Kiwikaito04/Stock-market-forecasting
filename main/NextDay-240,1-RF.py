@@ -5,12 +5,12 @@ import random
 
 import pandas as pd
 
-from src.data import fetch_yfinance_data
-from src.create_stock_data import create_label_NextDay, create_stock_data_RF_NextDay_1f
-from src.simulate import simulate
-from src.Statistics import Statistics
-from src.trainer import trainer_RF
-from src.utils import get_ticker_name
+from mint.data import fetch_yfinance_data
+from mint.create_stock_data import create_label_NextDay, create_stock_data_RF_NextDay_1f
+from mint.simulate import simulate
+from mint.Statistics import Statistics
+from mint.trainer import trainer_RF
+from mint.utils import get_ticker_name, get_valid_tickers
 
 
 # DATA CONFIGURATION
