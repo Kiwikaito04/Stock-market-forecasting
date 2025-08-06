@@ -24,8 +24,11 @@ WINDOW_SIZE = 3
 # CHECKPOINT CONFIGURATION
 MODEL_FOLDER = 'ayaya/models-Intraday-240-3-LSTM-Attention'
 RESULT_FOLDER = 'ayaya/results-Intraday-240-3-LSTM-Attention'
+DATA_FOLDER = 'dataset'
+
 os.makedirs(MODEL_FOLDER, exist_ok=True)
 os.makedirs(RESULT_FOLDER, exist_ok=True)
+os.makedirs(DATA_FOLDER, exist_ok=True)
 
 
 # RANDOM SEED SETUP
@@ -35,16 +38,39 @@ random.seed(SEED)
 np.random.seed(SEED)
 
 
+# ======================== TẢI DỮ LIỆU 1 LẦN ========================
+data_open_path = os.path.join(DATA_FOLDER, "df_open.csv")
+data_close_path = os.path.join(DATA_FOLDER, "df_close.csv")
+valid_tickers_path = os.path.join(DATA_FOLDER, "valid_tickers.csv")
+
+if os.path.exists(data_open_path) and os.path.exists(data_close_path):
+    df_open_all = pd.read_csv(data_open_path)
+    df_close_all = pd.read_csv(data_close_path)
+    TICKERS = get_valid_tickers(valid_tickers_path)
+    print("[INFO] Đã tải dữ liệu từ file CSV.")
+else:
+    TICKERS, df_open_all, df_close_all = fetch_yfinance_data(TICKERS, f"{START_YEAR}-01-01", f"{END_YEAR}-12-31")
+    df_open_all.to_csv(data_open_path, index=False)
+    df_close_all.to_csv(data_close_path, index=False)
+    pd.Series(TICKERS).to_csv(valid_tickers_path, index=False, header=False)
+    print("[INFO] Đã lưu dữ liệu vào CSV.")
+
+
 summary_rows = []
 
 
+# ======================== CHẠY QUA TỪNG NĂM ========================
 for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
     print(f"\n{'='*20} Testing {test_year} {'='*20}\n")
 
     start_date = f"{test_year - WINDOW_SIZE}-01-01"
     end_date = f"{test_year}-12-31"
 
-    df_open, df_close = fetch_yfinance_data(TICKERS, start_date, end_date)
+    # Lọc dữ liệu theo ngày
+    mask = (df_open_all['Date'] >= start_date) & (df_open_all['Date'] <= end_date)
+    df_open = df_open_all[mask].reset_index(drop=True)
+    df_close = df_close_all[mask].reset_index(drop=True)
+
     label = create_label_LSTM_Intraday(df_open, df_close)
 
     train_data, test_data = [], []
@@ -54,7 +80,7 @@ for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
             train_data.append(st_train)
             test_data.append(st_test)
         except Exception as e:
-            print(f"Skipped {ticker}: {e}")
+            print(f"[WARNING]: Skipped {ticker}: {e}")
             continue
 
     train_data = np.concatenate(train_data)
