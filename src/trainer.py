@@ -50,7 +50,7 @@ from tensorflow.keras import optimizers
 class LSTM_Attention_Model:
     def __init__(self, features=3, time_steps=240):
         self.inputs = Input(shape=(time_steps, features))     # (240, 3)
-        x = LSTM(25, return_sequences=False)(self.inputs)      # output: (240, 25)
+        x = LSTM(25, return_sequences=True)(self.inputs)      # output: (240, 25)
         x = Attention()(x)                                    # output: (25,)
         x = Dropout(0.1)(x)
         self.outputs = Dense(2, activation='softmax')(x)
@@ -118,14 +118,6 @@ def create_callbacks(test_year, model_type='LSTM', folder='models'):
     return [csv_logger, early_stop, checkpoint]
 
 # =================== Trainer LSTM =================== #
-# def predictor_LSTM(model, test_data, features):
-#     dates = list(set(test_data[:, 0]))
-#     predictions = {}
-#     for day in dates:
-#         test_d = test_data[test_data[:, 0] == day]
-#         test_d = reshaper(test_d[:, 2:-2], features=features).astype('float32')
-#         predictions[day] = model.predict(test_d)[:, 1]
-#     return predictions
 def predictor_LSTM(model, test_data, features):
     # Dữ liệu đầu vào
     all_x = test_data[:, 2:-2]
@@ -183,14 +175,6 @@ def trainer_LSTM_240(train_data, test_data, test_year, features=3, folder_save='
 ##############
 
 # =================== Model & Trainer RF =================== #
-# def predictor_RF(model, test_data):
-#     dates = list(set(test_data[:, 0]))
-#     predictions = {}
-#     for day in dates:
-#         test_d = test_data[test_data[:, 0] == day]
-#         test_d = test_d[:, 2:-2]
-#         predictions[day] = model.predict_proba(test_d)[:, 1]
-#     return predictions
 def predictor_RF(model, test_data):
     all_x = test_data[:, 2:-2]
     all_dates = test_data[:, 0]
