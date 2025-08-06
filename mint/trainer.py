@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestClassifier
 
-from src.create_stock_data import reshaper
+from mint.create_stock_data import reshaper
 
 import tensorflow as tf
 from tensorflow.keras.layers import LSTM, Dropout, Dense, Input

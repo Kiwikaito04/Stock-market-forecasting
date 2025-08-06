@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import RobustScaler
 
-from src.features import create_price_features, create_technical_features
+from mint.features import create_price_features, create_technical_features
 
 
 def reshaper(arr, features=3):
