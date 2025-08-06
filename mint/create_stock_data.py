@@ -19,7 +19,10 @@ def scalar_normalize(train_data, test_data):
     test_data[:, 2:-2] = scaler.transform(test_data[:, 2:-2])
 
 
-def create_label_LSTM_Intraday(df_open, df_close, perc=[0.5, 0.5]):
+def create_label_LSTM_Intraday(df_open, df_close, perc=None):
+    if perc is None:
+        perc = [0.5, 0.5]
+
     if not np.all(df_close['Date'] == df_open['Date']):
         raise ValueError('Date index mismatch')
 
@@ -30,7 +33,10 @@ def create_label_LSTM_Intraday(df_open, df_close, perc=[0.5, 0.5]):
     return label[1:]  # bỏ ngày đầu tiên vì không có giá trị trước đó
 
 
-def create_label_NextDay(df_close, perc=[0.5, 0.5]):
+def create_label_NextDay(df_close, perc=None):
+    if perc is None:
+        perc = [0.5, 0.5]
+
     perc = [0.] + list(np.cumsum(perc))
     label = df_close.iloc[:, 1:].pct_change(fill_method=None)[1:].apply(
         lambda x: pd.qcut(x.rank(method='first'), perc, labels=False), axis=1)
@@ -120,7 +126,10 @@ def create_stock_data_LSTM_NextDay_1f(df_close, label, ticker: str, test_year: i
     return np.array(train), np.array(test)
 
 
-def create_label_RF_Intraday(df_open, df_close, perc=[0.5, 0.5]):
+def create_label_RF_Intraday(df_open, df_close, perc=None):
+    if perc is None:
+        perc = [0.5, 0.5]
+
     if not np.all(df_close['Date'] == df_open['Date']):
         raise ValueError('Date index mismatch')
 
