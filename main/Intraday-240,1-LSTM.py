@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import random
 
-from mint.data import DataLoader
-from mint.create_stock_data import create_label_LSTM_Intraday, create_stock_data_LSTM_Intraday_1f, scalar_normalize, reshaper
+from mint.data import RawDataLoader
+from mint.create_stock_data import create_label_LSTM_Intraday, create_stock_data_LSTM_Intraday_1f, scalar_normalize
 from mint.simulate import simulate
 from mint.Statistics import Statistics
 from mint.trainer import trainer_LSTM_240
@@ -32,7 +32,7 @@ random.seed(SEED)
 np.random.seed(SEED)
 
 
-dataloader = DataLoader(DATA_FOLDER, START_YEAR, END_YEAR)
+dataloader = RawDataLoader(DATA_FOLDER, START_YEAR, END_YEAR)
 summary_rows = []
 
 

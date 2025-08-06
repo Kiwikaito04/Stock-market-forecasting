@@ -119,7 +119,7 @@ class YfinanceLoader():
         ]
 
 
-class DataLoader:
+class RawDataLoader:
     def __init__(self, data_folder, start_year, end_year):
         self.data_folder = data_folder
         self._load_data(start_year, end_year)

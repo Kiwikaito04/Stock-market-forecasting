@@ -5,7 +5,7 @@ import random
 
 import pandas as pd
 
-from mint.data import DataLoader
+from mint.data import RawDataLoader
 from mint.create_stock_data import create_label_NextDay, create_stock_data_RF_NextDay_1f
 from mint.simulate import simulate
 from mint.Statistics import Statistics
@@ -32,7 +32,7 @@ random.seed(SEED)
 np.random.seed(SEED)
 
 
-dataloader = DataLoader(DATA_FOLDER, START_YEAR, END_YEAR)
+dataloader = RawDataLoader(DATA_FOLDER, START_YEAR, END_YEAR)
 summary_rows = []
 
 
