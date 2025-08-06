@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import RobustScaler
 
-from mint.features import create_price_features, create_technical_features
+from mint.features import create_price_features
 
 
 def reshaper(arr, features=3):
@@ -63,41 +63,6 @@ def create_stock_data_LSTM_Intraday_3f(df_open, df_close, label, ticker: str, te
 
     train = df[df['Year'] < test_year].drop(columns=['Month', 'Year'])
     test = df[df['Year'] == test_year].drop(columns=['Month', 'Year'])
-    return np.array(train), np.array(test)
-
-
-def create_stock_data_LSTM_Intraday_3f_technical(df_open, df_close, df_tech, label, ticker: str, test_year: int, window: int = 240):
-    df = pd.DataFrame()
-    df['Date'] = df_close['Date']
-    df['Name'] = ticker
-
-    # Gọi module
-    intra_features, next_features, close_features = create_price_features(df_open, df_close, ticker, window)
-    rsi_features, sma_features, bbu_features, bbl_features = create_technical_features(df_tech, ticker, window)
-
-    # Gộp tất cả đặc trưng
-    df = pd.concat([
-        df,
-        pd.DataFrame(intra_features),
-        pd.DataFrame(next_features),
-        pd.DataFrame(close_features),
-        pd.DataFrame(rsi_features),
-        # pd.DataFrame(sma_features),
-        # pd.DataFrame(bbu_features),
-        # pd.DataFrame(bbl_features)
-    ], axis=1)
-
-    daily_change = df_close[ticker] / df_open[ticker] - 1
-    df['IntraR-future'] = daily_change.shift(-1)
-    df['label'] = label[ticker].values.tolist() + [np.nan]
-    df['Month'] = df['Date'].str[:7]
-
-    df = df.dropna()
-    df['Year'] = df['Month'].str[:4].astype(int)
-
-    train = df[df['Year'] < test_year].drop(columns=['Month', 'Year'])
-    test = df[df['Year'] == test_year].drop(columns=['Month', 'Year'])
-
     return np.array(train), np.array(test)
 
 
