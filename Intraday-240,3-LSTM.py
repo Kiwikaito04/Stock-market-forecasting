@@ -2,30 +2,34 @@ import os
 import numpy as np
 import pandas as pd
 import random
+from dotenv import load_dotenv
 
 from mint.data import RawDataLoader
-from mint.create_stock_data import create_label_NextDay, create_stock_data_LSTM_NextDay_1f, scalar_normalize
+from mint.create_stock_data import create_label_LSTM_Intraday, create_stock_data_LSTM_Intraday_3f, scalar_normalize
 from mint.simulate import simulate
 from mint.Statistics import Statistics
 from mint.trainer import trainer_LSTM_240
 
 
 # DATA CONFIGURATION
-START_YEAR, END_YEAR = 1990, 2018
-WINDOW_SIZE = 3
+load_dotenv()
+START_YEAR = int(os.getenv("START_YEAR", 1990))
+END_YEAR = int(os.getenv("END_YEAR", 2018))
+WINDOW_SIZE = int(os.getenv("WINDOW_SIZE", 3))
+DATA_FOLDER = os.getenv("DATA_FOLDER", "dataset")
+os.makedirs(DATA_FOLDER, exist_ok=True)
+SEED = int(os.getenv("SEED", 727))
+
 
 # CHECKPOINT CONFIGURATION
-MODEL_FOLDER = 'ayaya/models-NextDay-240-1-LSTM'
-RESULT_FOLDER = 'ayaya/results-NextDay-240-1-LSTM'
-DATA_FOLDER = '../dataset'
+MODEL_FOLDER = 'ayaya/models-Intraday-240-3-LSTM'
+RESULT_FOLDER = 'ayaya/results-Intraday-240-3-LSTM'
 
 os.makedirs(MODEL_FOLDER, exist_ok=True)
 os.makedirs(RESULT_FOLDER, exist_ok=True)
-os.makedirs(DATA_FOLDER, exist_ok=True)
 
 
 # RANDOM SEED SETUP
-SEED = 727
 os.environ['PYTHONHASHSEED']=str(SEED)
 random.seed(SEED)
 np.random.seed(SEED)
@@ -37,17 +41,17 @@ summary_rows = []
 
 # ======================== CHẠY QUA TỪNG NĂM ========================
 for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
-    print(f"\n{'='*20} Testing {test_year} {'='*20}\n")
+    print(f"\n{'='*20} Testing {test_year} {'='*20}\n\n")
 
     # Lấy dữ liệu
     print("[DEBUG] Khởi tạo tập dữ liệu...")
-    TICKERS, _, df_close = dataloader.get_open_close_window(test_year - WINDOW_SIZE, test_year)
-    label = create_label_NextDay(df_close)
+    TICKERS, df_open, df_close = dataloader.get_open_close_window(test_year - WINDOW_SIZE, test_year)
+    label = create_label_LSTM_Intraday(df_open, df_close)
 
     train_data, test_data = [], []
     for ticker in TICKERS:
         try:
-            st_train, st_test = create_stock_data_LSTM_NextDay_1f(df_close, label, ticker, test_year)
+            st_train, st_test = create_stock_data_LSTM_Intraday_3f(df_open, df_close, label, ticker, test_year)
             train_data.append(st_train)
             test_data.append(st_test)
         except Exception as e:
@@ -61,7 +65,7 @@ for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
     print("[DEBUG] Hoàn tất.")
 
     # Huấn luyện mô hình và đưa ra dự đoán, kiểm tra kết quả
-    model, predictions = trainer_LSTM_240(train_data, test_data, test_year, features=1, folder_save=MODEL_FOLDER)
+    model, predictions = trainer_LSTM_240(train_data, test_data, test_year, features=3, folder_save=MODEL_FOLDER)
     returns = simulate(test_data, predictions, k=10)
     returns.to_csv(f"{RESULT_FOLDER}/daily_rets_{test_year}.csv")
 
@@ -90,5 +94,7 @@ for test_year in range(START_YEAR + WINDOW_SIZE, END_YEAR + 1):
     # Save model with specific name
     model.save(os.path.join(MODEL_FOLDER, f"model-LSTM-{test_year}-final.keras"))
 
+
 summary_df = pd.DataFrame(summary_rows)
 summary_df.to_csv(os.path.join(RESULT_FOLDER, "summary_stats.csv"), index=False)
+
