@@ -6,7 +6,7 @@ from mint.create_stock_data import reshaper
 
 from tensorflow.keras.layers import LSTM, Dropout, Dense, Input, Layer
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
-from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.models import Model
 from tensorflow.keras import optimizers
 import tensorflow.keras.backend as K
 from tensorflow.keras.initializers import GlorotUniform
