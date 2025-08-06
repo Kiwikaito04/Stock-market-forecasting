@@ -4,20 +4,17 @@ from sklearn.ensemble import RandomForestClassifier
 
 from mint.create_stock_data import reshaper
 
-import tensorflow as tf
-from tensorflow.keras.layers import LSTM, Dropout, Dense, Input
+from tensorflow.keras.layers import LSTM, Dropout, Dense, Input, Layer
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
-from tensorflow.keras.models import Model, Sequential, load_model
+from tensorflow.keras.models import Model, load_model
 from tensorflow.keras import optimizers
+import tensorflow.keras.backend as K
+from tensorflow.keras.initializers import GlorotUniform
+
 
 ##############
 #       Attention
 ##############
-
-
-from tensorflow.keras.layers import Layer
-import tensorflow.keras.backend as K
-from tensorflow.keras.initializers import GlorotUniform
 
 
 class Attention(Layer):
@@ -40,11 +37,6 @@ class Attention(Layer):
         a = K.softmax(e, axis=1)                    # attention weights
         output = x * a                              # (batch, time_steps, features)
         return K.sum(output, axis=1)                # (batch, features)
-
-
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, LSTM, Dropout, Dense
-from tensorflow.keras import optimizers
 
 
 class LSTM_Attention_Model:
