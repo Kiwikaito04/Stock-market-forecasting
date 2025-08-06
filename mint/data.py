@@ -5,12 +5,23 @@ from datetime import datetime, timedelta
 
 
 class YfinanceLoader():
-    def __init__(self, valid_tickers='../dataset/valid_tickers.csv' , tickers_path='../dataset/stock-name.csv', tickers=None):
+    def __init__(self, valid_tickers='dataset/valid_tickers.csv' , tickers_path='dataset/stock-name.csv', tickers=None):
         if not tickers:
-            self.tickers = self._get_ticker_name(valid_tickers)
+            self.tickers = self._get_valid_ticker_name(valid_tickers)
         if not self.tickers:
             self.tickers = self._get_ticker_name(tickers_path)
 
+
+    @staticmethod
+    def _get_valid_ticker_name(tickers_path):
+        try:
+            df = pd.read_csv(tickers_path, header=None)
+            tickers = df.iloc[:, 0].dropna().unique().tolist()
+            tickers = [t.replace('.', '-') for t in tickers]  # Chuẩn hóa tên ticker
+            return tickers
+        except Exception as e:
+            print(f"[ERROR] _get_valid_ticker_name(): Lỗi khi đọc file ticker: {e}")
+            return []
 
     @staticmethod
     def _get_ticker_name(tickers_path):
@@ -24,7 +35,7 @@ class YfinanceLoader():
             return []
 
         
-    def fetch_yfinance_data(self,start_date, end_date, buffer=30):
+    def fetch_yfinance_data(self, start_date, end_date, buffer=30):
         # Tính ngày bắt đầu có thêm buffer
         start_dt = datetime.strptime(start_date, "%Y-%m-%d") - timedelta(days=buffer)
         start_buffer = start_dt.strftime("%Y-%m-%d")
