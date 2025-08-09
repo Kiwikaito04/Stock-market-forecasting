@@ -2,119 +2,192 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 
-def load_summary_data(summary_paths: dict, metric_cols: list) -> pd.DataFrame:
+
+def export_metric_table(summary_paths: dict, metric_map: dict[str, str]) -> pd.DataFrame:
     """
-    Đọc các file summary_stats.csv từ các thư mục và gom lại thành một DataFrame.
+    Xuất bảng các giá trị trung bình của các thước đo, theo từng mô hình.
+    - metric_map: dict[tên hiển thị -> tên cột trong summary_stats.csv]
     """
-    all_data = []
+    result = {}
 
     for model_name, folder_path in summary_paths.items():
         csv_path = os.path.join(folder_path, 'summary_stats.csv')
         if not os.path.exists(csv_path):
-            print(f"⚠️ File không tồn tại: {csv_path}")
+            print(f"⚠️ Không tìm thấy file: {csv_path}")
             continue
 
         df = pd.read_csv(csv_path)
-        required = set(['year'] + metric_cols)
-        if not required.issubset(df.columns):
-            print(f"⚠️ File thiếu cột cần thiết trong {csv_path}")
-            continue
+        model_metrics = {}
 
-        df = df[['year'] + metric_cols].copy()
-        df['Model'] = model_name
-        all_data.append(df)
+        for display_name, col_name in metric_map.items():
+            if col_name not in df.columns:
+                print(f"⚠️ Không có cột '{col_name}' trong {csv_path}")
+                continue
 
-    if not all_data:
-        raise ValueError("⚠️ Không có dữ liệu nào được nạp.")
+            value = df[col_name].mean()
+            model_metrics[display_name] = value
 
-    df_all = pd.concat(all_data)
-    df_all['year'] = df_all['year'].astype(int)
-    return df_all
+        result[model_name] = model_metrics
+
+    if not result:
+        raise ValueError("⚠️ Không có dữ liệu nào để xuất bảng.")
+
+    df_result = pd.DataFrame(result)
+    df_result.index.name = "Metric"
+    return df_result
 
 
-def filter_by_year_segment(df: pd.DataFrame, start: int, end: int) -> pd.DataFrame:
+from cumulative_returns_calc import ReturnDataManager
+def export_long_short_mean(result_paths: dict, segments: list[tuple[int, int]]) -> pd.DataFrame:
     """
-    Trích dữ liệu theo đoạn năm.
+    Tính trung bình Long và Short return cho mỗi mô hình trên toàn bộ các năm.
     """
-    return df[(df['year'] >= start) & (df['year'] <= end)]
+    manager = ReturnDataManager(result_paths, segments)
+
+    df = manager.get_all_data()
+    if df.empty:
+        raise ValueError("Không có dữ liệu để tính long/short return.")
+
+    grouped = df.groupby('label')[['long_return_net', 'short_return_net']].mean() * 100  # nhân 100 để đưa về %
+    grouped = grouped.rename(columns={
+        'long_return': 'Mean (Long) (%)',
+        'short_return': 'Mean (Short) (%)'
+    })
+
+    return grouped.T  # transpose để giống bảng export_metric_table
 
 
-def plot_metric_by_year(df: pd.DataFrame, metric: str, year_segments: list, title_prefix: str = '', transaction_cost: float = 0.0, ncols: int = 3):
+def plot_bar_metric_across_models(
+    metric: str,
+    summary_paths: dict,
+    segments: list[tuple[int, int]],
+    transaction_cost: float = 0.002,
+    ordered_labels: list[str] = None,
+    metric_name_map: dict[str, str] = None
+):
     """
-    Vẽ biểu đồ cột trung bình theo từng năm cho một chỉ số cụ thể.
-    Có thể áp dụng điều chỉnh theo transaction_cost nếu metric là 'mean'.
+    Vẽ biểu đồ cột cho một chỉ số đã chọn, theo thứ tự mô hình mong muốn.
     """
-    nrows = len(year_segments) // ncols + (1 if len(year_segments) % ncols != 0 else 0)  # Số hàng cần thiết để chứa tất cả các biểu đồ
 
-    # Tạo subplots
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(ncols * 7, nrows * 6))
-    axes = axes.flatten()  # Biến axes thành một mảng 1D dễ thao tác
+    # Map tên chỉ số hiển thị
+    if metric_name_map is None:
+        metric_name_map = {
+            'sharpe': 'Sharpe Ratio',
+            'mean': 'Mean Return (%)',
+            'std': 'Standard Deviation',
+            'long_return_net': 'Mean Long Return (%)',
+            'short_return_net': 'Mean Short Return (%)',
+            'return': 'Mean Net Return (%)',
+        }
 
-    for i, (seg_start, seg_end) in enumerate(year_segments):
-        df_segment = filter_by_year_segment(df, seg_start, seg_end)
+    display_name = metric_name_map.get(metric, metric)
 
-        if df_segment.empty:
-            print(f"⚠️ Không có dữ liệu cho đoạn {seg_start}-{seg_end}")
-            continue
+    # Lấy dữ liệu theo loại chỉ số
+    if metric in ['mean', 'std', 'sharpe', 'stderr', 'pos_perc', 'skewness', 'kurtosis', 'min', 'max']:
+        df_metrics = export_metric_table(summary_paths, {display_name: metric})
+        df_plot = df_metrics.loc[display_name]
 
-        df_plot = df_segment.copy()
+    elif metric in ['long_return_net', 'short_return_net', 'return']:
+        manager = ReturnDataManager(summary_paths, segments, transaction_cost)
+        df = manager.get_all_data()
+        if df.empty:
+            raise ValueError("Không có dữ liệu để vẽ.")
+        df_plot = df.groupby('label')[metric].mean() * 100  # nhân 100 để thành %
 
-        # Điều chỉnh mean nếu cần trừ phí giao dịch
-        if metric == 'mean' and transaction_cost > 0:
-            df_plot[metric] -= transaction_cost * 100  # giả định phí ở dạng %, mean cũng ở dạng %
+    else:
+        raise ValueError(f"Không hỗ trợ metric: {metric}")
 
-        pivot_df = df_plot.pivot_table(
-            index='year',
-            columns='Model',
-            values=metric,
-            aggfunc='mean'
-        ).sort_index()
+    # Đảm bảo đúng thứ tự mô hình
+    if ordered_labels is None:
+        ordered_labels = list(summary_paths.keys())
 
-        # Vẽ biểu đồ vào subplot tương ứng
-        ax = axes[i]
-        pivot_df.plot(kind='bar', ax=ax)
-        ax.set_title(f'{title_prefix} {metric.capitalize()} per Year ({seg_start}–{seg_end})')
-        ax.set_ylabel(metric.capitalize())
-        ax.set_xlabel('Year')
-        ax.grid(axis='y', linestyle='--', alpha=0.6)
-        ax.legend(title='Model')
+    df_plot = df_plot.reindex(ordered_labels)
 
-    # Tắt đi những subplots dư thừa nếu không đủ dữ liệu
-    for j in range(i + 1, len(axes)):
-        axes[j].axis('off')
-
+    # Vẽ biểu đồ
+    plt.figure(figsize=(10, 6))
+    df_plot.plot(kind='bar', color='steelblue')
+    plt.xticks(rotation=0, ha='center')  # chữ nằm ngang
+    plt.ylabel(display_name)
+    plt.title(display_name)
+    plt.grid(axis='y', linestyle='--', alpha=0.5)
     plt.tight_layout()
     plt.show()
 
 
-def plot_avg_sharpe_by_year(summary_paths: dict, year_segments: list, ncols: int = 3):
-    """
-    Hàm chính: Vẽ Sharpe ratio trung bình theo năm, chia đoạn.
-    """
-    df = load_summary_data(summary_paths, metric_cols=['sharpe'])
-    plot_metric_by_year(df, metric='sharpe', year_segments=year_segments, title_prefix='Average', ncols=ncols)
 
+RESULT_PATHS = {
+    # So sánh đặc trưng LSTM
+    "IntraDay 3-features LSTM": "results/1993_2018-full_tickers/results-Intraday-240-3-LSTM",
+    "NextDay 1-feature LSTM": "results/1993_2018-full_tickers/results-NextDay-240-1-LSTM",
 
-def plot_avg_mean_by_year(summary_paths: dict, year_segments: list, transaction_cost: float = 0.0, ncols: int = 3):
-    """
-    Hàm phụ: Vẽ Mean return trung bình theo năm, có thể điều chỉnh phí giao dịch.
-    """
-    df = load_summary_data(summary_paths, metric_cols=['mean'])
-    plot_metric_by_year(df, metric='mean', year_segments=year_segments, title_prefix='Average', transaction_cost=transaction_cost, ncols=ncols)
+    # So sánh đặc trưng RF
+    "IntraDay 3-features RF": "results/1993_2018-full_tickers/results-Intraday-240-3-RF",
+    "NextDay 1-feature RF": "results/1993_2018-full_tickers/results-NextDay-240-1-RF",
+
+    "IntraDay 1-features LSTM": "main-old/full-30_tickers/ayaya/results-IntraDay-240-1-LSTM",
+    "IntraDay 1-features RF": "main-old/full-30_tickers/ayaya/results-IntraDay-240-1-RF",
+}
+
+df = export_long_short_mean(RESULT_PATHS, [(1993, 2018)])
+print(df)
+df.to_csv("result-long_short.csv")
 
 
 SUMMARY_PATHS  = {
-    "IntraDay LSTM": "results/results-Intraday-240-3-LSTM",
-    "IntraDay RF": "results/results-Intraday-240-3-RF",
-    "NextDay LSTM": "results/results-NextDay-240-1-LSTM",
-    "NextDay RF": "results/results-NextDay-240-1-RF",
+    "IntraDay 3-features LSTM": "results/1993_2018-full_tickers/results-Intraday-240-3-LSTM",
+    "IntraDay 3-features RF": "results/1993_2018-full_tickers/results-Intraday-240-3-RF",
+
+    "IntraDay 1-features LSTM": "main-old/full-30_tickers/ayaya/results-IntraDay-240-1-LSTM",
+    "IntraDay 1-features RF": "main-old/full-30_tickers/ayaya/results-IntraDay-240-1-RF",
+
+    "NextDay 1-features LSTM": "results/1993_2018-full_tickers/results-NextDay-240-1-LSTM",
+    "NextDay 1-features RF": "results/1993_2018-full_tickers/results-NextDay-240-1-RF",
+
 }
 
-YEAR_SEGMENTS = [
-    (1993, 2000),
-    (2001, 2009),
-    (2010, 2018),
-]
 
-# Vẽ Sharpe với 3 cột
-plot_avg_sharpe_by_year(SUMMARY_PATHS, YEAR_SEGMENTS, ncols=3)
+metric_map = {
+    "Mean Return (%)": "mean",
+    "Standard Deviation": "std",
+    "Sharpe Ratio": "sharpe",
+    "Standard Error": "stderr",
+    "Share>0": "pos_perc",
+    "Skewness": "skewness",
+    "Kurtosis": "kurtosis",
+    "Min": "min",
+    "Max": "max",
+}
+
+df_metrics = export_metric_table(SUMMARY_PATHS, metric_map)
+print(df_metrics)
+df_metrics.to_csv("result.csv")
+
+
+YEAR_SEGMENTS = [
+    (1993, 2018),
+]
+metric_name_map = {
+
+    'sharpe': 'Sharpe Ratio',
+    'pos_perc': 'Share>0',
+    'mean': 'Mean Return (%)',
+    'long_return_net': 'Mean Long Return (%)',
+    'short_return_net': 'Mean Short Return (%)',
+}
+
+
+plot_bar_metric_across_models(
+    metric='sharpe',
+    summary_paths=SUMMARY_PATHS,
+    segments=YEAR_SEGMENTS,
+    ordered_labels=[
+        "IntraDay 3-features LSTM",
+        "NextDay 1-features LSTM",
+        "IntraDay 3-features RF",
+        "NextDay 1-features RF",
+        "IntraDay 1-features LSTM",
+        "IntraDay 1-features RF",
+    ],
+    metric_name_map=metric_name_map
+)
+
