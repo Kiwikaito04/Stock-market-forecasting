@@ -131,17 +131,19 @@ class YfinanceLoader():
 
 
 class RawDataLoader:
-    def __init__(self, data_folder, start_year, end_year):
+    def __init__(self, data_folder, start_year, end_year, mode_get_new=False):
         self.data_folder = data_folder
-        self._load_data(start_year, end_year)
+        self._load_data(start_year, end_year, mode_get_new)
 
 
-    def _load_data(self, start_year, end_year):
+    def _load_data(self, start_year, end_year, mode_get_new):
         data_open_path = os.path.join(self.data_folder, "df_open.csv")
         data_close_path = os.path.join(self.data_folder, "df_close.csv")
         valid_tickers_path = os.path.join(self.data_folder, "valid_tickers.csv")
 
-        if not os.path.exists(data_open_path) or not os.path.exists(data_close_path):
+
+        if not os.path.exists(data_open_path) or not os.path.exists(data_close_path)\
+                or mode_get_new:
             valid_tickers, df_open_all, df_close_all = YfinanceLoader().fetch_yfinance_data(
                 f"{start_year}-01-01",
                 f"{end_year}-12-31")
